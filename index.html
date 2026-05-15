@@ -35,16 +35,16 @@
 
 <nav class="nav-bar">
   <div class="nav-inner">
-    <div class="nav-tab active" onclick="showView('home', this)">🏠 Home</div>
-    <div class="nav-tab" onclick="showView('newcomer', this)">🌟 New Members</div>
-    <div class="nav-tab" onclick="showView('events', this)">📚 Events</div>
-    <div class="nav-tab" onclick="showView('regional', this)">🏅 Regional Results</div>
-    <div class="nav-tab" onclick="showView('roster', this)">👥 Team</div>
-    <div class="nav-tab" onclick="showView('resources', this)">🔗 Resources</div>
-    <div class="nav-tab" onclick="showView('schedule', this)">📅 Schedule</div>
-    <div class="nav-tab" onclick="showView('request', this)">🛒 Request</div>
-    <div class="nav-tab" onclick="showView('leaders', this)">🔒 Leaders</div>
-    <div class="nav-tab" onclick="showView('contact', this)">✉️ Contact</div>
+    <div class="nav-tab active" onclick="showView('home', this)">Home</div>
+    <div class="nav-tab" onclick="showView('newcomer', this)">New Members</div>
+    <div class="nav-tab" onclick="showView('events', this)">Events</div>
+    <div class="nav-tab" onclick="showView('regional', this)">Results</div>
+    <div class="nav-tab" onclick="showView('roster', this)">Team</div>
+    <div class="nav-tab" onclick="showView('resources', this)">Resources</div>
+    <div class="nav-tab" onclick="showView('schedule', this)">Schedule</div>
+    <div class="nav-tab" onclick="showView('request', this)">Request</div>
+    <div class="nav-tab" onclick="showView('leaders', this)">Leaders</div>
+    <div class="nav-tab" onclick="showView('contact', this)">Contact</div>
   </div>
 </nav>
 
@@ -53,8 +53,13 @@
   <!-- HOME VIEW -->
   <div id="view-home" class="view active">
     <div class="home-hero reveal">
-      <h2>Welcome, Falcons! 🦅</h2>
-      <p>Your all-in-one study hub for Science Olympiad 2026. Click the <strong>Events</strong> tab to explore rules, study strategies, and resources for every event. Let's make it to nationals.</p>
+      <div class="hero-eyebrow">Riverdale Country School · Division C</div>
+      <h2>Build sharper. Study deeper. Compete together.</h2>
+      <p>Everything the Riverdale Science Olympiad team needs for events, results, roster planning, purchase requests, and competition prep in one polished season hub.</p>
+      <div class="hero-actions">
+        <button type="button" onclick="showView('events', document.querySelector('.nav-tab[onclick*=events]'))">Explore Events</button>
+        <button type="button" onclick="showView('request', document.querySelector('.nav-tab[onclick*=request]'))">Request Materials</button>
+      </div>
     </div>
 
     <div class="reveal hero-photo-frame shine-surface tilt-card">
