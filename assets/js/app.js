@@ -556,7 +556,7 @@ function loadBudgetData(force = false) {
   budgetLoading = true;
   setBudgetStatus('Loading live budget data...');
 
-  loadBudgetJSONP('budget')
+  loadBudgetAPI('budget')
     .then(data => {
       budgetLoaded = true;
       renderBudgetData(data);
@@ -569,6 +569,31 @@ function loadBudgetData(force = false) {
     .finally(() => {
       budgetLoading = false;
     });
+}
+
+async function loadBudgetAPI(action, params = {}) {
+  const separator = BUDGET_API_URL.includes('?') ? '&' : '?';
+  const query = new URLSearchParams({
+    action,
+    token: BUDGET_API_TOKEN,
+    ...params
+  });
+  const response = await fetch(`${BUDGET_API_URL}${separator}${query.toString()}`, {
+    method: 'GET',
+    mode: 'cors',
+    cache: 'no-store'
+  });
+
+  if (!response.ok) {
+    throw new Error(`Budget API HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (payload && payload.ok === false) {
+    throw new Error(payload.error || 'Budget API returned an error.');
+  }
+
+  return payload;
 }
 
 function loadBudgetJSONP(action, params = {}) {
@@ -714,26 +739,7 @@ function submitBudgetRequest(event) {
   submitButton.disabled = true;
   setBudgetFormStatus('Sending request to Google Sheets...', '', form);
 
-  loadBudgetJSONP('createPurchaseRequest', params)
-    .then(() => {
-      setBudgetFormStatus('Request submitted. Leaders will see it in the purchase queue.', 'success', form);
-      form.reset();
-      const qty = form.querySelector('input[name="qty"]');
-      if (qty) qty.value = '1';
-      budgetLoaded = false;
-      if (leadersUnlocked) window.setTimeout(() => loadBudgetData(true), 800);
-    })
-    .catch(error => {
-      console.error(error);
-      if (String(error.message || '').includes('Unknown action')) {
-        submitBudgetRequestFallback(form, params);
-        return;
-      }
-      setBudgetFormStatus('Request could not be submitted. Check the Apps Script deployment.', 'error', form);
-    })
-    .finally(() => {
-      submitButton.disabled = false;
-    });
+  submitBudgetRequestFallback(form, params);
 }
 
 function submitBudgetRequestFallback(form, params) {
@@ -795,7 +801,7 @@ function updatePurchaseStatus(rowNumber, status) {
   }
 
   setBudgetStatus(`Saving status: ${status}...`);
-  loadBudgetJSONP('updatePurchaseStatus', {
+  loadBudgetAPI('updatePurchaseStatus', {
     rowNumber,
     status
   })
