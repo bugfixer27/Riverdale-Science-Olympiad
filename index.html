@@ -42,6 +42,7 @@
     <div class="nav-tab" onclick="showView('roster', this)">👥 Team</div>
     <div class="nav-tab" onclick="showView('resources', this)">🔗 Resources</div>
     <div class="nav-tab" onclick="showView('schedule', this)">📅 Schedule</div>
+    <div class="nav-tab" onclick="showView('request', this)">🛒 Request</div>
     <div class="nav-tab" onclick="showView('leaders', this)">🔒 Leaders</div>
     <div class="nav-tab" onclick="showView('contact', this)">✉️ Contact</div>
   </div>
@@ -354,6 +355,74 @@
     </div>
   </div>
 
+  <!-- PURCHASE REQUEST VIEW -->
+  <div id="view-request" class="view">
+    <div class="section-title reveal">Request a Purchase</div>
+    <div class="section-subtitle reveal">Submit materials, supplies, books, equipment, and competition needs for leader review.</div>
+
+    <section class="budget-hq public-request-hq reveal">
+      <div class="budget-header">
+        <div>
+          <span class="budget-kicker">Team Purchasing</span>
+          <h3>Send a Budget Request</h3>
+          <p>Requests go straight to the team budget sheet. Leaders can approve, order, or mark them received from the protected dashboard.</p>
+        </div>
+      </div>
+      <form class="purchase-request-form public-request-form" onsubmit="submitBudgetRequest(event)">
+        <h4>Purchase Details</h4>
+        <div class="form-grid">
+          <label>
+            Requester
+            <input name="requester" type="text" placeholder="Your name" required>
+          </label>
+          <label>
+            Category
+            <select name="category" required>
+              <option value="">Choose category</option>
+              <option>Build Events</option>
+              <option>Lab Events</option>
+              <option>Study / Reference</option>
+              <option>Competition Logistics</option>
+              <option>Team Operations</option>
+              <option>Fundraising / Offset</option>
+              <option>Reserve / Cushion</option>
+            </select>
+          </label>
+          <label>
+            Event / Area
+            <input name="eventArea" type="text" placeholder="Hovercraft, team ops, etc.">
+          </label>
+          <label>
+            Intended Price
+            <input name="estimatedCost" type="number" min="0" step="0.01" placeholder="0.00" required>
+          </label>
+          <label>
+            Quantity
+            <input name="qty" type="number" min="1" step="1" value="1" required>
+          </label>
+          <label>
+            Need By
+            <input name="needBy" type="date" required>
+          </label>
+        </div>
+        <label>
+          Link
+          <input name="vendorLink" type="url" placeholder="https://...">
+        </label>
+        <label>
+          Description
+          <textarea name="description" rows="3" placeholder="What do we need and why?"></textarea>
+        </label>
+        <label>
+          Notes
+          <textarea name="notes" rows="2" placeholder="Optional details, alternatives, or urgency"></textarea>
+        </label>
+        <button class="purchase-submit-btn" type="submit">Submit Request</button>
+        <div class="budget-form-status" aria-live="polite"></div>
+      </form>
+    </section>
+  </div>
+
   <!-- LEADERS VIEW -->
   <div id="view-leaders" class="view">
     <div class="section-title reveal">Leaders Dashboard</div>
@@ -432,23 +501,23 @@
               </label>
               <label>
                 Need By
-                <input name="needBy" type="date">
+                <input name="needBy" type="date" required>
               </label>
             </div>
             <label>
               Link
-              <input name="vendorLink" type="url" placeholder="https://..." required>
+              <input name="vendorLink" type="url" placeholder="https://...">
             </label>
             <label>
               Description
-              <textarea name="description" rows="3" placeholder="What do we need and why?" required></textarea>
+              <textarea name="description" rows="3" placeholder="What do we need and why?"></textarea>
             </label>
             <label>
               Notes
               <textarea name="notes" rows="2" placeholder="Optional details, alternatives, or urgency"></textarea>
             </label>
             <button class="purchase-submit-btn" type="submit">Submit Request</button>
-            <div class="budget-form-status" id="budget-form-status" aria-live="polite"></div>
+            <div class="budget-form-status" aria-live="polite"></div>
           </form>
 
           <div class="budget-lists">

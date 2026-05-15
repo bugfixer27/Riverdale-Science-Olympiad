@@ -2344,6 +2344,46 @@
     padding: 12px 0;
   }
 
+  .public-request-hq {
+    max-width: 860px;
+    margin: 0 auto 34px;
+  }
+
+  .public-request-form {
+    max-width: none;
+  }
+
+  .leader-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .leader-action-btn {
+    border: 1px solid rgba(139,26,26,0.14);
+    border-radius: 9px;
+    background: #fffaf0;
+    color: var(--crimson);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 850;
+    padding: 7px 9px;
+    transition: transform 0.2s var(--ease-out-expo), border-color 0.2s ease, background 0.2s ease;
+  }
+
+  .leader-action-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--gold);
+    background: var(--gold-pale);
+  }
+
+  .leader-action-btn.received {
+    background: #edf7ed;
+    color: #1f6b35;
+  }
+
   /* === NEWCOMER PAGE === */
   .newcomer-hero {
     padding: 48px;

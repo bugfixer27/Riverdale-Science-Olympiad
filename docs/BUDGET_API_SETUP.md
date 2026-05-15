@@ -34,5 +34,11 @@ After pushing to GitHub Pages, unlock the Leaders page and the budget section wi
 
 - The Leaders password is casual access control only. It is not real security.
 - Purchase requests append to the `Purchase Requests` tab.
-- The budget cards read from `Dashboard`, `Purchase Requests`, and `Spending Log`.
+- Purchase requests are written to the first available row under the headers, not the bottom of the pre-sized sheet.
+- Leaders can mark requests `Approved`, `Ordered`, or `Received` from the website.
+- `Ordered` and `Received` requests are copied into `Spending Log` once. The script uses `Spent Logged At` and `Spending Log Row` columns in `Purchase Requests` to prevent duplicates.
+- Manual sheet edits also work: changing a request status in column I to `Ordered` or `Received` triggers the same Spending Log copy.
+- The budget header cards are computed from request/spending rows instead of trusting the dashboard formulas.
 - If you edit column names in the sheet, update `docs/apps-script-budget-api.js` to match.
+
+After changing Apps Script code, use **Deploy > Manage deployments > Edit** and create a new version so the live `/exec` URL receives the update.

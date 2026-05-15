@@ -44,6 +44,7 @@ Update these sections:
 The Leaders page uses the password in `LEADERS_PASSWORD` and remembers access for the current browser session. It is not real security because this is a static GitHub Pages site.
 
 The budget frontend reads from the `UPDATED-SCIOLY Budgets and needs` spreadsheet through a Google Apps Script Web App. Setup instructions and the API script live in [docs/BUDGET_API_SETUP.md](docs/BUDGET_API_SETUP.md).
+There is also a public purchase request page in the main nav; the protected Leaders page keeps the same form plus live request/spending cards and status controls.
 
 To add notes or practice test scores, edit `STUDENT_PROFILES`:
 

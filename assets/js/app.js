@@ -23,6 +23,50 @@ function formatBudgetValue(value) {
   return String(value);
 }
 
+function parseBudgetMoney(value) {
+  const parsed = Number(String(value || '').replace(/[$,]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatBudgetMoney(value) {
+  return `$${Number(value || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function budgetRequestAmount(request) {
+  const total = parseBudgetMoney(request.totalRequest);
+  if (total > 0) return total;
+  const estimated = parseBudgetMoney(request.estimatedCost);
+  const qty = parseBudgetMoney(request.qty) || 1;
+  return estimated * qty;
+}
+
+function computedBudgetDashboard(dashboard, purchaseRequests, spendingLog) {
+  const startingBudget = parseBudgetMoney(dashboard.startingBudget);
+  const loggedSpent = spendingLog.reduce((sum, item) => sum + parseBudgetMoney(item.amount), 0);
+  const spentRequestsNotLogged = purchaseRequests
+    .filter(request => ['Ordered', 'Received'].includes(request.status || '') && !request.spentLoggedAt)
+    .reduce((sum, request) => sum + budgetRequestAmount(request), 0);
+  const spent = loggedSpent + spentRequestsNotLogged;
+  const pendingRequests = purchaseRequests
+    .filter(request => ['Submitted', 'Needs info'].includes(request.status || 'Submitted'))
+    .reduce((sum, request) => sum + budgetRequestAmount(request), 0);
+  const approvedPlanned = purchaseRequests
+    .filter(request => ['Approved', 'Ordered'].includes(request.status || ''))
+    .reduce((sum, request) => sum + budgetRequestAmount(request), 0);
+
+  return {
+    ...dashboard,
+    spent: formatBudgetMoney(spent || parseBudgetMoney(dashboard.spent)),
+    cashRemaining: startingBudget ? formatBudgetMoney(startingBudget - spent) : formatBudgetValue(dashboard.cashRemaining),
+    pendingRequests: formatBudgetMoney(pendingRequests),
+    approvedPlanned: formatBudgetMoney(approvedPlanned),
+    totalPlanned: formatBudgetMoney(pendingRequests + approvedPlanned)
+  };
+}
+
 function setBudgetStatus(message, type = '') {
   const status = document.getElementById('budget-status');
   if (!status) return;
@@ -30,8 +74,8 @@ function setBudgetStatus(message, type = '') {
   status.className = `budget-status ${type}`.trim();
 }
 
-function setBudgetFormStatus(message, type = '') {
-  const status = document.getElementById('budget-form-status');
+function setBudgetFormStatus(message, type = '', form = null) {
+  const status = form?.querySelector('.budget-form-status') || document.querySelector('.budget-form-status');
   if (!status) return;
   status.textContent = message;
   status.className = `budget-form-status ${type}`.trim();
@@ -527,12 +571,18 @@ function loadBudgetData(force = false) {
     });
 }
 
-function loadBudgetJSONP(action) {
+function loadBudgetJSONP(action, params = {}) {
   return new Promise((resolve, reject) => {
     const callbackName = `riverdaleBudgetCallback${Date.now()}${budgetJsonpCounter++}`;
     const script = document.createElement('script');
     const separator = BUDGET_API_URL.includes('?') ? '&' : '?';
-    script.src = `${BUDGET_API_URL}${separator}action=${encodeURIComponent(action)}&token=${encodeURIComponent(BUDGET_API_TOKEN)}&callback=${encodeURIComponent(callbackName)}`;
+    const query = new URLSearchParams({
+      action,
+      token: BUDGET_API_TOKEN,
+      callback: callbackName,
+      ...params
+    });
+    script.src = `${BUDGET_API_URL}${separator}${query.toString()}`;
 
     const timeout = window.setTimeout(() => {
       cleanup();
@@ -564,9 +614,9 @@ function loadBudgetJSONP(action) {
 }
 
 function renderBudgetData(data) {
-  const dashboard = data.dashboard || {};
   const purchaseRequests = Array.isArray(data.purchaseRequests) ? data.purchaseRequests : [];
   const spendingLog = Array.isArray(data.spendingLog) ? data.spendingLog : [];
+  const dashboard = computedBudgetDashboard(data.dashboard || {}, purchaseRequests, spendingLog);
   const summaryGrid = document.getElementById('budget-summary-grid');
   const requestList = document.getElementById('purchase-requests-list');
   const spendingList = document.getElementById('spending-log-list');
@@ -602,6 +652,14 @@ function renderPurchaseRequestCard(request) {
   const link = request.vendorLink
     ? `<a class="budget-link-inline" href="${escapeHTML(request.vendorLink)}" target="_blank" rel="noopener">Vendor link</a>`
     : '';
+  const rowNumber = request.rowNumber ? Number(request.rowNumber) : 0;
+  const actions = leadersUnlocked && rowNumber
+    ? `<div class="leader-actions">
+        <button class="leader-action-btn" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Approved')">Approve</button>
+        <button class="leader-action-btn" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Ordered')">Mark Bought</button>
+        <button class="leader-action-btn received" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Received')">Mark Received</button>
+      </div>`
+    : '';
   return `
     <article class="budget-item-card">
       <div class="budget-item-top">
@@ -615,6 +673,7 @@ function renderPurchaseRequestCard(request) {
         ${request.needBy ? `<span>Need by ${escapeHTML(request.needBy)}</span>` : ''}
         ${link}
       </div>
+      ${actions}
     </article>
   `;
 }
@@ -642,13 +701,42 @@ function renderSpendingLogCard(item) {
 
 function submitBudgetRequest(event) {
   event.preventDefault();
+  const form = event.currentTarget;
 
   if (!BUDGET_API_URL) {
-    setBudgetFormStatus('Budget API is not connected yet, so this request was not sent.', 'error');
+    setBudgetFormStatus('Budget API is not connected yet, so this request was not sent.', 'error', form);
     return;
   }
 
-  const form = event.currentTarget;
+  const submitButton = form.querySelector('button[type="submit"]');
+  const formData = new FormData(form);
+  const params = Object.fromEntries(formData.entries());
+  submitButton.disabled = true;
+  setBudgetFormStatus('Sending request to Google Sheets...', '', form);
+
+  loadBudgetJSONP('createPurchaseRequest', params)
+    .then(() => {
+      setBudgetFormStatus('Request submitted. Leaders will see it in the purchase queue.', 'success', form);
+      form.reset();
+      const qty = form.querySelector('input[name="qty"]');
+      if (qty) qty.value = '1';
+      budgetLoaded = false;
+      if (leadersUnlocked) window.setTimeout(() => loadBudgetData(true), 800);
+    })
+    .catch(error => {
+      console.error(error);
+      if (String(error.message || '').includes('Unknown action')) {
+        submitBudgetRequestFallback(form, params);
+        return;
+      }
+      setBudgetFormStatus('Request could not be submitted. Check the Apps Script deployment.', 'error', form);
+    })
+    .finally(() => {
+      submitButton.disabled = false;
+    });
+}
+
+function submitBudgetRequestFallback(form, params) {
   const submitButton = form.querySelector('button[type="submit"]');
   const iframeName = `budget-submit-${Date.now()}`;
   const iframe = document.createElement('iframe');
@@ -663,11 +751,13 @@ function submitBudgetRequest(event) {
   payloadForm.target = iframeName;
   payloadForm.className = 'hidden';
 
-  const formData = new FormData(form);
-  formData.set('action', 'createPurchaseRequest');
-  formData.set('token', BUDGET_API_TOKEN);
+  const payload = {
+    ...params,
+    action: 'createPurchaseRequest',
+    token: BUDGET_API_TOKEN
+  };
 
-  formData.forEach((value, key) => {
+  Object.entries(payload).forEach(([key, value]) => {
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = key;
@@ -677,15 +767,17 @@ function submitBudgetRequest(event) {
 
   document.body.appendChild(payloadForm);
   submitButton.disabled = true;
-  setBudgetFormStatus('Sending request to Google Sheets...');
+  setBudgetFormStatus('Sending request through compatibility mode...', '', form);
 
   iframe.addEventListener('load', () => {
-    setBudgetFormStatus('Request submitted. Refreshing budget cards...', 'success');
+    setBudgetFormStatus('Request submitted. Redeploy the updated Apps Script to enable confirmed responses and leader status controls.', 'success', form);
     form.reset();
     const qty = form.querySelector('input[name="qty"]');
     if (qty) qty.value = '1';
-    budgetLoaded = false;
-    window.setTimeout(() => loadBudgetData(true), 1200);
+    if (leadersUnlocked) {
+      budgetLoaded = false;
+      window.setTimeout(() => loadBudgetData(true), 1000);
+    }
     window.setTimeout(() => {
       iframe.remove();
       payloadForm.remove();
@@ -694,6 +786,28 @@ function submitBudgetRequest(event) {
   }, { once: true });
 
   payloadForm.submit();
+}
+
+function updatePurchaseStatus(rowNumber, status) {
+  if (!BUDGET_API_URL) {
+    setBudgetStatus('Budget API is not connected yet, so status changes cannot be saved.', 'error');
+    return;
+  }
+
+  setBudgetStatus(`Saving status: ${status}...`);
+  loadBudgetJSONP('updatePurchaseStatus', {
+    rowNumber,
+    status
+  })
+    .then(() => {
+      budgetLoaded = false;
+      setBudgetStatus(`Request marked ${status}. Refreshing budget cards...`, 'success');
+      window.setTimeout(() => loadBudgetData(true), 700);
+    })
+    .catch(error => {
+      console.error(error);
+      setBudgetStatus('Status could not be saved. Check the Apps Script deployment.', 'error');
+    });
 }
 
 function renderLeadersRoster() {
