@@ -378,6 +378,98 @@
         <a class="resource-link budget-link" href="https://docs.google.com/spreadsheets/d/1gzxt-oxuxjCn4QsGHNc7KWcdt2OTQQNqS9WfYuAIvn8/edit" target="_blank" rel="noopener">Open Team Budget →</a>
       </div>
 
+      <section class="budget-hq reveal" id="budget-hq">
+        <div class="budget-header">
+          <div>
+            <span class="budget-kicker">Budget HQ</span>
+            <h3>Purchases, Requests, and Spending</h3>
+            <p>Submit new requests and review the latest rows from Google Sheets. Data loads only after the Leaders page is opened.</p>
+          </div>
+          <button class="budget-refresh-btn" type="button" onclick="loadBudgetData(true)">Refresh</button>
+        </div>
+
+        <div class="budget-status" id="budget-status">Connect the Apps Script API to load live budget data.</div>
+
+        <div class="budget-summary-grid" id="budget-summary-grid">
+          <div class="budget-summary-card"><span>Starting Budget</span><strong>--</strong></div>
+          <div class="budget-summary-card"><span>Spent</span><strong>--</strong></div>
+          <div class="budget-summary-card"><span>Cash Remaining</span><strong>--</strong></div>
+          <div class="budget-summary-card"><span>Pending Requests</span><strong>--</strong></div>
+        </div>
+
+        <div class="budget-workspace">
+          <form class="purchase-request-form" id="purchase-request-form" onsubmit="submitBudgetRequest(event)">
+            <h4>Request a Purchase</h4>
+            <div class="form-grid">
+              <label>
+                Requester
+                <input name="requester" type="text" placeholder="Your name" required>
+              </label>
+              <label>
+                Category
+                <select name="category" required>
+                  <option value="">Choose category</option>
+                  <option>Build Events</option>
+                  <option>Lab Events</option>
+                  <option>Study / Reference</option>
+                  <option>Competition Logistics</option>
+                  <option>Team Operations</option>
+                  <option>Fundraising / Offset</option>
+                  <option>Reserve / Cushion</option>
+                </select>
+              </label>
+              <label>
+                Event / Area
+                <input name="eventArea" type="text" placeholder="Hovercraft, team ops, etc.">
+              </label>
+              <label>
+                Intended Price
+                <input name="estimatedCost" type="number" min="0" step="0.01" placeholder="0.00" required>
+              </label>
+              <label>
+                Quantity
+                <input name="qty" type="number" min="1" step="1" value="1" required>
+              </label>
+              <label>
+                Need By
+                <input name="needBy" type="date">
+              </label>
+            </div>
+            <label>
+              Link
+              <input name="vendorLink" type="url" placeholder="https://..." required>
+            </label>
+            <label>
+              Description
+              <textarea name="description" rows="3" placeholder="What do we need and why?" required></textarea>
+            </label>
+            <label>
+              Notes
+              <textarea name="notes" rows="2" placeholder="Optional details, alternatives, or urgency"></textarea>
+            </label>
+            <button class="purchase-submit-btn" type="submit">Submit Request</button>
+            <div class="budget-form-status" id="budget-form-status" aria-live="polite"></div>
+          </form>
+
+          <div class="budget-lists">
+            <div class="budget-list-panel">
+              <div class="budget-list-heading">
+                <h4>Purchase Requests</h4>
+                <span id="purchase-request-count">0</span>
+              </div>
+              <div class="budget-card-list" id="purchase-requests-list"></div>
+            </div>
+            <div class="budget-list-panel">
+              <div class="budget-list-heading">
+                <h4>Spending Log</h4>
+                <span id="spending-log-count">0</span>
+              </div>
+              <div class="budget-card-list" id="spending-log-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div class="leaders-panel reveal">
         <div>
           <h3>Student Roster</h3>

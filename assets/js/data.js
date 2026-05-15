@@ -4,6 +4,8 @@
 const TEAM_LEADERS = ["Florian", "Rohan", "Luke"];
 const LEADERS_PASSWORD = "Riverdale5250";
 const LEADERS_BUDGET_URL = "https://docs.google.com/spreadsheets/d/1gzxt-oxuxjCn4QsGHNc7KWcdt2OTQQNqS9WfYuAIvn8/edit";
+const BUDGET_API_URL = "https://script.google.com/macros/s/AKfycbxXMsV4MyyeeE0cj7NuLniRs6Gn0pl4qWkCJ-NoReF116XcSJoMUXgkzmcZIc1-rXTEVw/exec";
+const BUDGET_API_TOKEN = "Riverdale5250";
 
 // Optional leader-only roster notes. Leave fields blank until you have details to add.
 // Example:

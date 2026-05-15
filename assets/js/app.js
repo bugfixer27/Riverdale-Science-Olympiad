@@ -5,6 +5,9 @@ let currentResultTeam = 'A';
 let currentRosterTeam = 'all';
 let scrollAnimationObserver = null;
 let leadersUnlocked = sessionStorage.getItem('leadersAccessGranted') === 'true';
+let budgetLoaded = false;
+let budgetLoading = false;
+let budgetJsonpCounter = 0;
 
 function escapeHTML(value) {
   return String(value)
@@ -13,6 +16,25 @@ function escapeHTML(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function formatBudgetValue(value) {
+  if (value === undefined || value === null || value === '') return '--';
+  return String(value);
+}
+
+function setBudgetStatus(message, type = '') {
+  const status = document.getElementById('budget-status');
+  if (!status) return;
+  status.textContent = message;
+  status.className = `budget-status ${type}`.trim();
+}
+
+function setBudgetFormStatus(message, type = '') {
+  const status = document.getElementById('budget-form-status');
+  if (!status) return;
+  status.textContent = message;
+  status.className = `budget-form-status ${type}`.trim();
 }
 
 function renderEvents(events) {
@@ -429,6 +451,7 @@ function initLeadersPage() {
     gate.classList.add('hidden');
     dashboard.classList.remove('hidden');
     if (error) error.textContent = '';
+    initBudgetDashboard();
     renderLeadersRoster();
   } else {
     gate.classList.remove('hidden');
@@ -454,6 +477,223 @@ function unlockLeaders(event) {
 
   if (error) error.textContent = 'Incorrect password.';
   passwordInput.select();
+}
+
+function initBudgetDashboard() {
+  const budgetLink = document.querySelector('.budget-link');
+  if (budgetLink) budgetLink.href = LEADERS_BUDGET_URL;
+
+  if (!BUDGET_API_URL) {
+    setBudgetStatus('Budget API is not connected yet. Deploy docs/apps-script-budget-api.js as a Google Apps Script Web App, then paste the Web App URL into BUDGET_API_URL in assets/js/data.js.', 'error');
+    renderBudgetData({
+      dashboard: {},
+      purchaseRequests: [],
+      spendingLog: []
+    });
+    return;
+  }
+
+  if (!budgetLoaded && !budgetLoading) {
+    loadBudgetData();
+  }
+}
+
+function loadBudgetData(force = false) {
+  if (!leadersUnlocked) return;
+
+  if (!BUDGET_API_URL) {
+    initBudgetDashboard();
+    return;
+  }
+
+  if (budgetLoading) return;
+  if (budgetLoaded && !force) return;
+
+  budgetLoading = true;
+  setBudgetStatus('Loading live budget data...');
+
+  loadBudgetJSONP('budget')
+    .then(data => {
+      budgetLoaded = true;
+      renderBudgetData(data);
+      setBudgetStatus('Budget data loaded from Google Sheets.', 'success');
+    })
+    .catch(error => {
+      console.error(error);
+      setBudgetStatus('Budget data could not be loaded. Check the Apps Script Web App URL and deployment access.', 'error');
+    })
+    .finally(() => {
+      budgetLoading = false;
+    });
+}
+
+function loadBudgetJSONP(action) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `riverdaleBudgetCallback${Date.now()}${budgetJsonpCounter++}`;
+    const script = document.createElement('script');
+    const separator = BUDGET_API_URL.includes('?') ? '&' : '?';
+    script.src = `${BUDGET_API_URL}${separator}action=${encodeURIComponent(action)}&token=${encodeURIComponent(BUDGET_API_TOKEN)}&callback=${encodeURIComponent(callbackName)}`;
+
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Budget API timed out.'));
+    }, 12000);
+
+    function cleanup() {
+      window.clearTimeout(timeout);
+      script.remove();
+      delete window[callbackName];
+    }
+
+    window[callbackName] = payload => {
+      cleanup();
+      if (payload && payload.ok === false) {
+        reject(new Error(payload.error || 'Budget API returned an error.'));
+        return;
+      }
+      resolve(payload);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Budget API script failed to load.'));
+    };
+
+    document.body.appendChild(script);
+  });
+}
+
+function renderBudgetData(data) {
+  const dashboard = data.dashboard || {};
+  const purchaseRequests = Array.isArray(data.purchaseRequests) ? data.purchaseRequests : [];
+  const spendingLog = Array.isArray(data.spendingLog) ? data.spendingLog : [];
+  const summaryGrid = document.getElementById('budget-summary-grid');
+  const requestList = document.getElementById('purchase-requests-list');
+  const spendingList = document.getElementById('spending-log-list');
+  const requestCount = document.getElementById('purchase-request-count');
+  const spendingCount = document.getElementById('spending-log-count');
+
+  if (summaryGrid) {
+    summaryGrid.innerHTML = `
+      <div class="budget-summary-card"><span>Starting Budget</span><strong>${escapeHTML(formatBudgetValue(dashboard.startingBudget))}</strong></div>
+      <div class="budget-summary-card"><span>Spent</span><strong>${escapeHTML(formatBudgetValue(dashboard.spent))}</strong></div>
+      <div class="budget-summary-card"><span>Cash Remaining</span><strong>${escapeHTML(formatBudgetValue(dashboard.cashRemaining))}</strong></div>
+      <div class="budget-summary-card"><span>Pending Requests</span><strong>${escapeHTML(formatBudgetValue(dashboard.pendingRequests))}</strong></div>
+    `;
+  }
+
+  if (requestCount) requestCount.textContent = purchaseRequests.length;
+  if (spendingCount) spendingCount.textContent = spendingLog.length;
+
+  if (requestList) {
+    requestList.innerHTML = purchaseRequests.length
+      ? purchaseRequests.map(renderPurchaseRequestCard).join('')
+      : '<div class="budget-empty">No purchase requests yet.</div>';
+  }
+
+  if (spendingList) {
+    spendingList.innerHTML = spendingLog.length
+      ? spendingLog.map(renderSpendingLogCard).join('')
+      : '<div class="budget-empty">No spending logged yet.</div>';
+  }
+}
+
+function renderPurchaseRequestCard(request) {
+  const link = request.vendorLink
+    ? `<a class="budget-link-inline" href="${escapeHTML(request.vendorLink)}" target="_blank" rel="noopener">Vendor link</a>`
+    : '';
+  return `
+    <article class="budget-item-card">
+      <div class="budget-item-top">
+        <strong>${escapeHTML(request.description || 'Untitled request')}</strong>
+        <span class="budget-amount">${escapeHTML(formatBudgetValue(request.totalRequest || request.estimatedCost))}</span>
+      </div>
+      <div class="budget-meta">
+        <span class="budget-status-pill">${escapeHTML(request.status || 'Submitted')}</span>
+        <span>${escapeHTML(request.requester || 'Unknown requester')}</span>
+        <span>${escapeHTML(request.category || 'Uncategorized')}</span>
+        ${request.needBy ? `<span>Need by ${escapeHTML(request.needBy)}</span>` : ''}
+        ${link}
+      </div>
+    </article>
+  `;
+}
+
+function renderSpendingLogCard(item) {
+  const receipt = item.receiptLink
+    ? `<a class="budget-link-inline" href="${escapeHTML(item.receiptLink)}" target="_blank" rel="noopener">Receipt</a>`
+    : '';
+  return `
+    <article class="budget-item-card">
+      <div class="budget-item-top">
+        <strong>${escapeHTML(item.item || item.vendor || 'Logged purchase')}</strong>
+        <span class="budget-amount">${escapeHTML(formatBudgetValue(item.amount))}</span>
+      </div>
+      <div class="budget-meta">
+        <span class="budget-status-pill">${escapeHTML(item.reimbursementStatus || 'Logged')}</span>
+        <span>${escapeHTML(item.vendor || 'No vendor')}</span>
+        <span>${escapeHTML(item.category || 'Uncategorized')}</span>
+        ${item.date ? `<span>${escapeHTML(item.date)}</span>` : ''}
+        ${receipt}
+      </div>
+    </article>
+  `;
+}
+
+function submitBudgetRequest(event) {
+  event.preventDefault();
+
+  if (!BUDGET_API_URL) {
+    setBudgetFormStatus('Budget API is not connected yet, so this request was not sent.', 'error');
+    return;
+  }
+
+  const form = event.currentTarget;
+  const submitButton = form.querySelector('button[type="submit"]');
+  const iframeName = `budget-submit-${Date.now()}`;
+  const iframe = document.createElement('iframe');
+  iframe.name = iframeName;
+  iframe.className = 'hidden';
+  iframe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(iframe);
+
+  const payloadForm = document.createElement('form');
+  payloadForm.method = 'POST';
+  payloadForm.action = BUDGET_API_URL;
+  payloadForm.target = iframeName;
+  payloadForm.className = 'hidden';
+
+  const formData = new FormData(form);
+  formData.set('action', 'createPurchaseRequest');
+  formData.set('token', BUDGET_API_TOKEN);
+
+  formData.forEach((value, key) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = key;
+    input.value = value;
+    payloadForm.appendChild(input);
+  });
+
+  document.body.appendChild(payloadForm);
+  submitButton.disabled = true;
+  setBudgetFormStatus('Sending request to Google Sheets...');
+
+  iframe.addEventListener('load', () => {
+    setBudgetFormStatus('Request submitted. Refreshing budget cards...', 'success');
+    form.reset();
+    const qty = form.querySelector('input[name="qty"]');
+    if (qty) qty.value = '1';
+    budgetLoaded = false;
+    window.setTimeout(() => loadBudgetData(true), 1200);
+    window.setTimeout(() => {
+      iframe.remove();
+      payloadForm.remove();
+    }, 2500);
+    submitButton.disabled = false;
+  }, { once: true });
+
+  payloadForm.submit();
 }
 
 function renderLeadersRoster() {

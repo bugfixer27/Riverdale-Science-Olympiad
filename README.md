@@ -31,6 +31,8 @@ Update these sections:
 - `TEAM_LEADERS`: names that should be marked as student leaders on the roster.
 - `LEADERS_PASSWORD`: the light client-side password for the Leaders page. This is only meant to stop casual access; it is visible in the site files.
 - `LEADERS_BUDGET_URL`: the Google Sheets budget link shown on the Leaders page.
+- `BUDGET_API_URL`: the deployed Google Apps Script Web App URL used by the Leaders budget frontend.
+- `BUDGET_API_TOKEN`: a light shared token sent to the Apps Script API. This is visible in the site files, so it only prevents casual use.
 - `STUDENT_PROFILES`: optional leader-only notes and practice test score fields for each student.
 - `EVENTS`: event cards, modal descriptions, rule summaries, links, and tips.
 - `REGIONAL_EVENTS`, `RIVERDALE_A_SCORES`, `RIVERDALE_B_SCORES`: event order and scores.
@@ -40,6 +42,8 @@ Update these sections:
 ### Leaders Page Notes
 
 The Leaders page uses the password in `LEADERS_PASSWORD` and remembers access for the current browser session. It is not real security because this is a static GitHub Pages site.
+
+The budget frontend reads from the `UPDATED-SCIOLY Budgets and needs` spreadsheet through a Google Apps Script Web App. Setup instructions and the API script live in [docs/BUDGET_API_SETUP.md](docs/BUDGET_API_SETUP.md).
 
 To add notes or practice test scores, edit `STUDENT_PROFILES`:
 
