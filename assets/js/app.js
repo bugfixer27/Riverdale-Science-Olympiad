@@ -4,6 +4,16 @@ let currentFilter = 'all';
 let currentResultTeam = 'A';
 let currentRosterTeam = 'all';
 let scrollAnimationObserver = null;
+let leadersUnlocked = sessionStorage.getItem('leadersAccessGranted') === 'true';
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 function renderEvents(events) {
   const grid = document.getElementById('events-grid');
@@ -365,6 +375,171 @@ function renderRoster() {
 }
 
 
+// ============ LEADERS DASHBOARD ============
+
+function getStudentRecords() {
+  const students = new Map();
+
+  function addAssignments(team, assignments) {
+    for (const [eventName, members] of Object.entries(assignments)) {
+      members.forEach(name => {
+        if (!name || name === 'NONE') return;
+        if (!students.has(name)) {
+          students.set(name, {
+            name,
+            teams: new Set(),
+            events: []
+          });
+        }
+        const student = students.get(name);
+        student.teams.add(team);
+        student.events.push({ name: eventName, team });
+      });
+    }
+  }
+
+  addAssignments('A', TEAM_A_ASSIGNMENTS);
+  addAssignments('B', TEAM_B_ASSIGNMENTS);
+
+  return Array.from(students.values())
+    .map(student => ({
+      ...student,
+      teams: Array.from(student.teams).sort(),
+      events: student.events.sort((a, b) => a.name.localeCompare(b.name) || a.team.localeCompare(b.team))
+    }))
+    .sort((a, b) => {
+      const aLeader = TEAM_LEADERS.some(leader => a.name.startsWith(leader));
+      const bLeader = TEAM_LEADERS.some(leader => b.name.startsWith(leader));
+      if (aLeader && !bLeader) return -1;
+      if (!aLeader && bLeader) return 1;
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function initLeadersPage() {
+  const gate = document.getElementById('leaders-gate');
+  const dashboard = document.getElementById('leaders-dashboard');
+  const passwordInput = document.getElementById('leaders-password');
+  const error = document.getElementById('leaders-error');
+  const budgetLink = document.querySelector('.budget-link');
+
+  if (budgetLink) budgetLink.href = LEADERS_BUDGET_URL;
+
+  if (leadersUnlocked) {
+    gate.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+    if (error) error.textContent = '';
+    renderLeadersRoster();
+  } else {
+    gate.classList.remove('hidden');
+    dashboard.classList.add('hidden');
+    setTimeout(() => passwordInput?.focus(), 80);
+  }
+}
+
+function unlockLeaders(event) {
+  event.preventDefault();
+  const passwordInput = document.getElementById('leaders-password');
+  const error = document.getElementById('leaders-error');
+  const submittedPassword = passwordInput.value.trim();
+
+  if (submittedPassword === LEADERS_PASSWORD) {
+    leadersUnlocked = true;
+    sessionStorage.setItem('leadersAccessGranted', 'true');
+    passwordInput.value = '';
+    if (error) error.textContent = '';
+    initLeadersPage();
+    return;
+  }
+
+  if (error) error.textContent = 'Incorrect password.';
+  passwordInput.select();
+}
+
+function renderLeadersRoster() {
+  if (!leadersUnlocked) return;
+
+  const grid = document.getElementById('leaders-roster-grid');
+  const searchInput = document.getElementById('leaders-search');
+  const search = (searchInput?.value || '').trim().toLowerCase();
+  const students = getStudentRecords().filter(student => {
+    if (!search) return true;
+    return student.name.toLowerCase().includes(search)
+      || student.events.some(event => event.name.toLowerCase().includes(search));
+  });
+
+  grid.innerHTML = '';
+
+  students.forEach((student, i) => {
+    const profile = STUDENT_PROFILES[student.name] || {};
+    const isLeader = TEAM_LEADERS.some(leader => student.name.startsWith(leader));
+    const teamsLabel = student.teams.map(team => `Team ${team}`).join(' / ');
+    const notesStatus = profile.notes ? 'Notes added' : 'Notes blank';
+    const card = document.createElement('div');
+    card.className = 'roster-card reveal tilt-card shine-surface';
+    card.style.setProperty('--i', i % 12);
+    card.innerHTML = `
+      <span class="roster-team-label ${student.teams.includes('A') ? 'roster-team-a' : 'roster-team-b'}">${teamsLabel}</span>
+      <h3>${escapeHTML(student.name)}</h3>
+      <div class="roster-role">${isLeader ? '⭐ Student Leader' : notesStatus}</div>
+      <div class="roster-events">
+        ${student.events.map(event => `<span class="roster-event-tag">${escapeHTML(event.name)}</span>`).join('')}
+      </div>
+    `;
+    card.addEventListener('click', () => openLeaderStudentModal(student.name));
+    attachPointerGlow(card);
+    attachTilt(card);
+    grid.appendChild(card);
+  });
+
+  initScrollAnimations();
+}
+
+function openLeaderStudentModal(studentName) {
+  const student = getStudentRecords().find(record => record.name === studentName);
+  if (!student) return;
+
+  const profile = STUDENT_PROFILES[student.name] || {};
+  const practiceTests = profile.practiceTests || {};
+  const teamsLabel = student.teams.map(team => `Team ${team}`).join(' / ');
+  const rows = student.events.map(event => `
+    <tr>
+      <td>${escapeHTML(event.name)}</td>
+      <td>Team ${escapeHTML(event.team)}</td>
+      <td>${practiceTests[event.name] ? escapeHTML(practiceTests[event.name]) : '<span class="leader-empty">Blank</span>'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('leader-student-modal-title').textContent = student.name;
+  document.getElementById('leader-student-modal-type').textContent = `${teamsLabel} · Leader Notes`;
+  document.getElementById('leader-student-modal-body').innerHTML = `
+    <div class="modal-section">
+      <h3>📝 Notes</h3>
+      <p>${profile.notes ? escapeHTML(profile.notes) : '<span class="leader-empty">No notes yet.</span>'}</p>
+    </div>
+    <div class="modal-section">
+      <h3>📊 Practice Test Scores</h3>
+      <table class="practice-table">
+        <thead><tr><th>Event</th><th>Team</th><th>Score / Notes</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+
+  document.getElementById('leader-student-modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLeaderStudentModal() {
+  document.getElementById('leader-student-modal-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function closeLeaderStudentModalOutside(e) {
+  if (e.target === document.getElementById('leader-student-modal-overlay')) closeLeaderStudentModal();
+}
+
+
 // ============ NAVIGATION ============
 
 function showView(name, tabEl) {
@@ -376,6 +551,7 @@ function showView(name, tabEl) {
 
   if (name === 'regional') renderResults();
   if (name === 'roster') renderRoster();
+  if (name === 'leaders') initLeadersPage();
 
   setTimeout(() => {
     initScrollAnimations();
@@ -387,6 +563,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal();
     closeResultModal();
+    closeLeaderStudentModal();
   }
 });
 

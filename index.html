@@ -42,6 +42,7 @@
     <div class="nav-tab" onclick="showView('roster', this)">👥 Team</div>
     <div class="nav-tab" onclick="showView('resources', this)">🔗 Resources</div>
     <div class="nav-tab" onclick="showView('schedule', this)">📅 Schedule</div>
+    <div class="nav-tab" onclick="showView('leaders', this)">🔒 Leaders</div>
     <div class="nav-tab" onclick="showView('contact', this)">✉️ Contact</div>
   </div>
 </nav>
@@ -353,6 +354,42 @@
     </div>
   </div>
 
+  <!-- LEADERS VIEW -->
+  <div id="view-leaders" class="view">
+    <div class="section-title reveal">Leaders Dashboard</div>
+    <div class="section-subtitle reveal">Password-gated planning space for roster notes, practice test tracking, and budget access.</div>
+
+    <div class="leaders-gate reveal" id="leaders-gate">
+      <form class="leaders-login" onsubmit="unlockLeaders(event)">
+        <div class="leaders-lock-icon">🔒</div>
+        <h3>Leader Access</h3>
+        <p>Enter the leaders password to open the dashboard.</p>
+        <label for="leaders-password">Password</label>
+        <div class="leaders-password-row">
+          <input id="leaders-password" type="password" autocomplete="current-password" placeholder="Enter password">
+          <button type="submit">Unlock</button>
+        </div>
+        <div class="leaders-error" id="leaders-error" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <div class="leaders-dashboard hidden" id="leaders-dashboard">
+      <div class="leaders-actions reveal">
+        <a class="resource-link budget-link" href="https://docs.google.com/spreadsheets/d/1gzxt-oxuxjCn4QsGHNc7KWcdt2OTQQNqS9WfYuAIvn8/edit" target="_blank" rel="noopener">Open Team Budget →</a>
+      </div>
+
+      <div class="leaders-panel reveal">
+        <div>
+          <h3>Student Roster</h3>
+          <p>Click a student to view private notes and practice test score slots. Edit the blanks in <strong>assets/js/data.js</strong>.</p>
+        </div>
+        <input class="search-bar leaders-search" id="leaders-search" type="text" placeholder="🔍  Search students..." oninput="renderLeadersRoster()">
+      </div>
+
+      <div class="roster-grid" id="leaders-roster-grid"></div>
+    </div>
+  </div>
+
   <!-- CONTACT VIEW -->
   <div id="view-contact" class="view">
     <div class="section-title reveal">Contact Leaders & Advisors</div>
@@ -394,6 +431,18 @@
         <strong>Team logistics (tournament day, travel, etc.)</strong> — Ms. Monti is the best point of contact for anything involving school administration.
       </p>
     </div>
+  </div>
+</div>
+
+<!-- LEADER STUDENT MODAL -->
+<div id="leader-student-modal-overlay" class="modal-overlay hidden" onclick="closeLeaderStudentModalOutside(event)">
+  <div class="modal" id="leader-student-modal">
+    <div class="modal-header">
+      <div class="modal-type" id="leader-student-modal-type">Leader Notes</div>
+      <h2 id="leader-student-modal-title"></h2>
+      <button class="modal-close" onclick="closeLeaderStudentModal()">✕</button>
+    </div>
+    <div class="modal-body" id="leader-student-modal-body"></div>
   </div>
 </div>
 

@@ -2,6 +2,18 @@
 // Edit this file when the season changes: events, regional results, assignments, and leaders live here.
 
 const TEAM_LEADERS = ["Florian", "Rohan", "Luke"];
+const LEADERS_PASSWORD = "Riverdale5250";
+const LEADERS_BUDGET_URL = "https://docs.google.com/spreadsheets/d/1gzxt-oxuxjCn4QsGHNc7KWcdt2OTQQNqS9WfYuAIvn8/edit";
+
+// Optional leader-only roster notes. Leave fields blank until you have details to add.
+// Example:
+// "Student Name": {
+//   notes: "Strong binder builder; pair with a build teammate.",
+//   practiceTests: {
+//     "Astronomy": "42/60 on Jan practice test"
+//   }
+// }
+const STUDENT_PROFILES = {};
 
 // ============ 2026 EVENT DATA ============
 // Each event card and event modal is generated from this list.

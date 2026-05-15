@@ -29,10 +29,30 @@ Most season updates live in one file:
 Update these sections:
 
 - `TEAM_LEADERS`: names that should be marked as student leaders on the roster.
+- `LEADERS_PASSWORD`: the light client-side password for the Leaders page. This is only meant to stop casual access; it is visible in the site files.
+- `LEADERS_BUDGET_URL`: the Google Sheets budget link shown on the Leaders page.
+- `STUDENT_PROFILES`: optional leader-only notes and practice test score fields for each student.
 - `EVENTS`: event cards, modal descriptions, rule summaries, links, and tips.
 - `REGIONAL_EVENTS`, `RIVERDALE_A_SCORES`, `RIVERDALE_B_SCORES`: event order and scores.
 - `TEAM_A_ASSIGNMENTS`, `TEAM_B_ASSIGNMENTS`: members assigned to each event.
 - `TOP5`: regional top-five placements shown in result modals.
+
+### Leaders Page Notes
+
+The Leaders page uses the password in `LEADERS_PASSWORD` and remembers access for the current browser session. It is not real security because this is a static GitHub Pages site.
+
+To add notes or practice test scores, edit `STUDENT_PROFILES`:
+
+```js
+const STUDENT_PROFILES = {
+  "Student Name": {
+    notes: "Add private leader notes here.",
+    practiceTests: {
+      "Hovercraft": "Score or comment goes here"
+    }
+  }
+};
+```
 
 The home-page team photo is stored at:
 
