@@ -326,9 +326,9 @@
 
   <!-- TEAM ROSTER VIEW -->
   <div id="view-roster" class="view">
-    <details class="roster-next">
-      <summary><span>2026–27 Team Roster</span><span class="roster-next-status">New season <span aria-hidden="true">＋</span></span></summary>
-      <div class="roster-next-body"><h3>Coming soon</h3><p>The 2026–27 roster and event assignments will be posted here after the first club periods of the fall. Last year's two teams are listed below.</p></div>
+    <details class="roster-next" id="roster-next" open>
+      <summary><span>2026–27 Team Roster</span><span class="roster-next-status"><time id="roster-next-stamp">New season</time> <span aria-hidden="true">＋</span></span></summary>
+      <div class="roster-next-body" id="roster-next-body"><h3>Coming soon</h3><p>The 2026–27 roster and event assignments will be posted here after the first club periods of the fall. Last year's two teams are listed below.</p></div>
     </details>
     <header class="view-head">
       <div class="section-title">2025–26 Team Roster</div>
@@ -759,10 +759,10 @@
 </svg>
 
 <!-- Scripts start right after the largest contentful paint (or after 300 ms, whichever comes first), so the opening shot never waits on them.
-     Order is preserved (async=false): GSAP → ScrollTrigger → Lenis → data → catalog → app → features. -->
+     Order is preserved (async=false): GSAP → ScrollTrigger → Lenis → data → catalog → 2026–27 roster → app → features. -->
 <script>
 (function () {
-  var files = ["https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js", "assets/vendor/lenis.min.js", "assets/js/data.js", "assets/js/events-2027.js", "assets/js/app.js", "assets/js/features.js?v=20260905"];
+  var files = ["https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js", "assets/vendor/lenis.min.js", "assets/js/data.js", "assets/js/events-2027.js", "assets/js/roster-2027.js", "assets/js/app.js", "assets/js/features.js?v=20261008"];
   var started = false;
   function start() {
     if (started) return;

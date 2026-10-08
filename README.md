@@ -40,6 +40,22 @@ Update these sections:
 - `TOP5`: regional top-five placements shown in result modals.
 - `COUNTDOWN_EVENTS`: dates for the live countdowns on the Home "Your Season" panel. Edit as the 2026–27 calendar firms up.
 
+### 2026–27 teams and assignments
+
+`assets/js/roster-2027.js` is generated from the TeamFit Team Builder. Don't edit it by hand. Make changes in the
+Team Builder, save there, then run:
+
+```bash
+node tools/sync-teamfit.mjs
+```
+
+The script calls the Team Builder's read-only `load` action and writes only first names (with a last initial
+when two members share a first name), teams, and events. Emails, grades, and survey answers are not copied.
+The Team page's 2026–27 roster, the Home "Your Season" assignments, and the ⌘K teammate search all read it.
+
+Rejected purchase requests (status `Rejected / Cut`, set by the **Reject** button on the Leaders page) are
+hidden from the dashboard. The row stays in the budget sheet as a record.
+
 ## 2026 Experience Layer
 
 A second styling/behavior layer (`assets/css/enhancements.css` + `assets/js/features.js`) adds a set of features on top of the original site. None of it requires a build step or any new dependency — it is plain CSS and vanilla JavaScript, and it reads the same data in `assets/js/data.js`.

@@ -556,6 +556,82 @@ function renderRoster() {
     grid.appendChild(card);
   });
   initScrollAnimations();
+  renderRoster2027();
+}
+
+
+// ============ 2026–27 ROSTER (from tools/sync-teamfit.mjs) ============
+
+let currentRoster2027Team = 'all';
+
+function hasRoster2027() {
+  return typeof ROSTER_2027 !== 'undefined' && Object.values(ROSTER_2027).some(names => names.length);
+}
+
+// [{ name, team, events[] }] for every member placed on a 2026–27 team, leaders first.
+function getRoster2027Members() {
+  if (!hasRoster2027()) return [];
+  const members = [];
+  for (const [team, names] of Object.entries(ROSTER_2027)) {
+    const assignments = ASSIGNMENTS_2027[team] || {};
+    names.forEach(name => members.push({
+      name,
+      team,
+      events: Object.keys(assignments).filter(ev => assignments[ev].includes(name))
+    }));
+  }
+  const isLeader = name => TEAM_LEADERS.some(leader => name.startsWith(leader));
+  return members.sort((a, b) =>
+    (isLeader(b.name) - isLeader(a.name)) || a.team.localeCompare(b.team) || a.name.localeCompare(b.name));
+}
+
+function setRoster2027Team(team, btn) {
+  currentRoster2027Team = team;
+  document.querySelectorAll('#roster-next-body .team-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRoster2027Grid();
+}
+
+function renderRoster2027() {
+  const body = document.getElementById('roster-next-body');
+  if (!body || !hasRoster2027()) return;
+  const teams = Object.keys(ROSTER_2027);
+  const meta = typeof ROSTER_2027_META !== 'undefined' ? ROSTER_2027_META : {};
+  const updated = meta.updatedAt ? new Date(meta.updatedAt) : null;
+  const stamp = document.getElementById('roster-next-stamp');
+  if (stamp && updated) {
+    stamp.dateTime = meta.updatedAt;
+    stamp.textContent = 'Updated ' + updated.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  const count = teams.reduce((n, t) => n + ROSTER_2027[t].length, 0);
+  body.classList.add('is-live');
+  body.innerHTML = `
+    <p class="roster-next-lede">${count} students across ${teams.map(t => 'Team ' + t).join(', ').replace(/, ([^,]*)$/, ', and $1')}, with their events on the 24-event slate.${meta.published ? '' : ' Assignments are still being finalized and may change.'}</p>
+    <div class="team-toggle">
+      <button class="team-toggle-btn active" onclick="setRoster2027Team('all', this)">All Members</button>
+      ${teams.map(t => `<button class="team-toggle-btn" onclick="setRoster2027Team('${t}', this)">Team ${t}</button>`).join('')}
+    </div>
+    <div class="roster-grid" id="roster-2027-grid"></div>`;
+  renderRoster2027Grid();
+}
+
+function renderRoster2027Grid() {
+  const grid = document.getElementById('roster-2027-grid');
+  if (!grid) return;
+  const members = getRoster2027Members().filter(m => currentRoster2027Team === 'all' || m.team === currentRoster2027Team);
+  grid.innerHTML = members.map((member, i) => {
+    const isLeader = TEAM_LEADERS.some(l => member.name.startsWith(l));
+    return `<div class="roster-card" style="--i:${i % 3}">
+      <span class="roster-team-label roster-team-${member.team.toLowerCase()}">Team ${member.team}</span>
+      <h3>${escapeHTML(member.name)}</h3>
+      <div class="roster-role">${isLeader ? '⭐ Student Leader' : 'Team Member'}</div>
+      <div class="roster-events">
+        ${member.events.length
+          ? member.events.map(e => `<span class="roster-event-tag">${escapeHTML(e)}</span>`).join('')
+          : '<span class="roster-event-tag is-pending">Events to be assigned</span>'}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 
@@ -756,8 +832,14 @@ function loadBudgetJSONP(action, params = {}) {
   });
 }
 
+function isRejectedRequest(request) {
+  return /^rejected/i.test(String(request.status || '').trim());
+}
+
 function renderBudgetData(data) {
-  const purchaseRequests = Array.isArray(data.purchaseRequests) ? data.purchaseRequests : [];
+  // Rejected requests stay in the sheet as a record but disappear from the dashboard.
+  const purchaseRequests = (Array.isArray(data.purchaseRequests) ? data.purchaseRequests : [])
+    .filter(request => !isRejectedRequest(request));
   const spendingLog = Array.isArray(data.spendingLog) ? data.spendingLog : [];
   const dashboard = computedBudgetDashboard(data.dashboard || {}, purchaseRequests, spendingLog);
   const summaryGrid = document.getElementById('budget-summary-grid');
@@ -801,10 +883,11 @@ function renderPurchaseRequestCard(request) {
         <button class="leader-action-btn" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Approved')">Approve</button>
         <button class="leader-action-btn" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Ordered')">Mark Bought</button>
         <button class="leader-action-btn received" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Received')">Mark Received</button>
+        <button class="leader-action-btn reject" type="button" onclick="rejectPurchaseRequest(${rowNumber})">Reject</button>
       </div>`
     : '';
   return `
-    <article class="budget-item-card">
+    <article class="budget-item-card"${rowNumber ? ` data-request-row="${rowNumber}"` : ''}>
       <div class="budget-item-top">
         <strong>${escapeHTML(request.description || 'Untitled request')}</strong>
         <span class="budget-amount">${escapeHTML(formatBudgetValue(request.totalRequest || request.estimatedCost))}</span>
@@ -910,6 +993,19 @@ function submitBudgetRequestFallback(form, params) {
   }, { once: true });
 
   payloadForm.submit();
+}
+
+function rejectPurchaseRequest(rowNumber) {
+  const card = document.querySelector(`[data-request-row="${rowNumber}"]`);
+  const name = card?.querySelector('strong')?.textContent || 'this request';
+  if (!window.confirm(`Reject "${name}"? It will be removed from the dashboard (the sheet row is kept, marked Rejected / Cut).`)) return;
+  if (card) {
+    card.classList.add('is-leaving');
+    window.setTimeout(() => card.remove(), 260);
+    const count = document.getElementById('purchase-request-count');
+    if (count) count.textContent = Math.max(0, Number(count.textContent) - 1);
+  }
+  updatePurchaseStatus(rowNumber, 'Rejected / Cut');
 }
 
 function updatePurchaseStatus(rowNumber, status) {

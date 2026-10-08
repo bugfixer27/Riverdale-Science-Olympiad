@@ -37,3 +37,14 @@ test('historical catalog and results stay separate from new season IDs', () => {
   assert(!context.catalog.some(e => e.name === 'Helicopter'));
   assert(context.archive.every(e => !e.id.startsWith('2027-')));
 });
+test('2026–27 roster from the Team Builder uses the catalog slate and only names', () => {
+  const src = fs.readFileSync(path.join(root, 'assets/js/roster-2027.js'), 'utf8');
+  const c = vm.createContext({});
+  vm.runInContext(src + '\nglobalThis.out = { roster: ROSTER_2027, asg: ASSIGNMENTS_2027 };', c);
+  assert(!/@/.test(src), 'no email addresses');
+  for (const [team, names] of Object.entries(c.out.roster)) {
+    assert.deepEqual(Object.keys(c.out.asg[team]), expected);
+    for (const people of Object.values(c.out.asg[team]))
+      people.forEach(n => assert(names.includes(n), `${n} assigned on Team ${team} but not on its roster`));
+  }
+});

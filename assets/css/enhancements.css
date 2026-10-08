@@ -168,6 +168,7 @@ html[data-theme="dark"] .ai-card { background: rgba(42, 20, 20, 0.92); border-co
 html[data-theme="dark"] .ai-card textarea { background: #241111; color: #f8eded; border-color: #654a2c; }
 html[data-theme="dark"] .ai-response { background: #241111; color: #f8eded; }
 html[data-theme="dark"] .leader-action-btn { background: rgba(255,255,255,0.05); color: var(--gold-light); }
+html[data-theme="dark"] .leader-action-btn.reject { background: rgba(255,90,90,0.1); color: #ffb0b0; }
 
 /* =====================================================================
    FLOATING CONTROL DOCK (theme toggle, palette, top)
@@ -1488,8 +1489,13 @@ header#live-header { z-index: 2; }
 .roster-next-status > span { display: inline-block; font-size: 1.3rem; margin-left: 15px; transition: transform var(--dur-2) var(--ease-out); }
 .roster-next[open] .roster-next-status > span { transform: rotate(45deg); }
 .roster-next-body { border-top: 1px solid var(--line-soft); padding: 28px; background: #801d32; color: #fff; }
-.roster-next-body h3 { font: 700 2.2rem/1.2 var(--font-display); margin-bottom: 12px; color: #f1d197; }
+.roster-next-body > h3 { font: 700 2.2rem/1.2 var(--font-display); margin-bottom: 12px; color: #f1d197; }
 .roster-next-body p { color: #f4dce3; max-width: 600px; }
+.roster-next-body.is-live { background: transparent; color: inherit; }
+.roster-next-body.is-live .roster-next-lede { color: var(--text-light); margin-bottom: 20px; }
+.roster-next-body.is-live .team-toggle { margin-bottom: 24px; }
+.roster-team-c { background: var(--crimson-deep); color: #f1d197; }
+.roster-event-tag.is-pending { background: transparent; border: 1px dashed currentColor; opacity: .7; }
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .view.active > .section-title, .tips-heading {

@@ -25,6 +25,7 @@
     try { window.TEAM_A_ASSIGNMENTS = window.TEAM_A_ASSIGNMENTS || TEAM_A_ASSIGNMENTS; } catch (e) {}
     try { window.TEAM_B_ASSIGNMENTS = window.TEAM_B_ASSIGNMENTS || TEAM_B_ASSIGNMENTS; } catch (e) {}
     try { window.TEAM_LEADERS = window.TEAM_LEADERS || TEAM_LEADERS; } catch (e) {}
+    try { window.ROSTER_2027 = window.ROSTER_2027 || ROSTER_2027; window.ASSIGNMENTS_2027 = window.ASSIGNMENTS_2027 || ASSIGNMENTS_2027; } catch (e) {}
     try { window.COUNTDOWN_EVENTS = window.COUNTDOWN_EVENTS || COUNTDOWN_EVENTS; } catch (e) {}
     try { window.LEADERS_BUDGET_URL = window.LEADERS_BUDGET_URL || LEADERS_BUDGET_URL; } catch (e) {}
   }
@@ -179,7 +180,13 @@
       }));
     }
     try {
-      if (window.getStudentRecords) {
+      if (window.getRoster2027Members && window.getRoster2027Members().length) {
+        window.getRoster2027Members().forEach(m => items.push({
+          type: 'Teammate', title: m.name,
+          sub: 'Team ' + m.team + ' · 2026–27 · ' + m.events.length + ' events',
+          icon: '👤', run: () => navTo('roster')
+        }));
+      } else if (window.getStudentRecords) {
         window.getStudentRecords().forEach(st => items.push({
           type: 'Teammate', title: st.name,
           sub: 'Team ' + st.teams.join(' / ') + ' · ' + st.events.length + ' events',
@@ -354,6 +361,7 @@
 
   function rosterNames() {
     const set = new Set();
+    Object.values(window.ROSTER_2027 || {}).forEach(names => names.forEach(n => set.add(n)));
     ['TEAM_A_ASSIGNMENTS', 'TEAM_B_ASSIGNMENTS'].forEach(k => {
       const obj = window[k] || {};
       Object.values(obj).forEach(arr => (arr || []).forEach(n => { if (n && n !== 'NONE') set.add(n); }));
@@ -369,6 +377,37 @@
       });
     });
     return out.sort((a, b) => a.ev.localeCompare(b.ev));
+  }
+  // 2026–27 names are first names; a saved 2025–26 name like "Cole Simmons" still matches "Cole"
+  // when only one 2026–27 member has that first name.
+  function currentSeat(name) {
+    const roster = window.ROSTER_2027 || {};
+    const find = n => Object.keys(roster).find(t => roster[t].includes(n));
+    let team = find(name), seatName = name;
+    if (!team) {
+      const first = name.split(' ')[0];
+      const hits = Object.values(roster).flat().filter(n => n === first || n.startsWith(first + ' '));
+      if (hits.length === 1) { seatName = hits[0]; team = find(seatName); }
+    }
+    if (!team) return null;
+    const asg = (window.ASSIGNMENTS_2027 || {})[team] || {};
+    return { team, events: Object.keys(asg).filter(ev => asg[ev].includes(seatName)).sort((a, b) => a.localeCompare(b)) };
+  }
+  function currentAssignmentsHTML(name) {
+    const hasRoster = Object.values(window.ROSTER_2027 || {}).some(n => n.length);
+    const seat = name && hasRoster ? currentSeat(name) : null;
+    if (!seat) {
+      const msg = hasRoster
+        ? (name ? 'You are not on a 2026–27 team list yet. Check with the leaders if that looks wrong.' : 'Pick your name above to see your team and events for the 24-event slate.')
+        : 'Assignments for the 24-event slate are made in the first club periods of the fall. Yours will appear here once the leaders post them.';
+      return `<div class="season-coming"><div><span class="season-label">YOUR 2026–27 ASSIGNMENTS</span><h3>${hasRoster ? 'Teams are posted' : 'Coming soon'}<span aria-hidden="true">↗</span></h3><p>${msg}</p></div><span class="coming-pill">${hasRoster && !name ? 'See the Team page' : 'Not assigned yet'}</span></div>`;
+    }
+    return `<div class="season-coming is-live"><div><span class="season-label">YOUR 2026–27 ASSIGNMENTS · TEAM ${esc(seat.team)}</span>
+      <h3>${seat.events.length ? seat.events.length + ' event' + (seat.events.length === 1 ? '' : 's') : 'Events to be assigned'}<span aria-hidden="true">↗</span></h3>
+      <div class="season-events">${seat.events.map(ev => {
+        const meta = (window.EVENTS || []).find(x => x.name === ev);
+        return `<button class="season-event-chip current" data-current-ev="${esc(ev)}"><span>${meta ? meta.icon : '📌'}</span>${esc(ev)}</button>`;
+      }).join('')}</div></div><span class="coming-pill">Team ${esc(seat.team)}</span></div>`;
   }
 
   function nextCountdownData() {
@@ -410,7 +449,7 @@
           <div class="season-avatar">🦅</div>
           <div>
             <div class="season-greeting">Your seat on the team</div>
-            <div class="season-sub">Pick your name to see last year’s events and track this season’s prep. Saved on this device only.</div>
+            <div class="season-sub">Pick your name to see your 2026–27 team and events, plus last year’s. Saved on this device only.</div>
           </div>
           <div class="season-picker">
             <select id="season-select" aria-label="Select your name">
@@ -420,7 +459,7 @@
             <button class="season-btn" type="button" id="season-save">Set</button>
           </div>
         </div>
-        <div class="season-coming"><div><span class="season-label">YOUR 2026–27 ASSIGNMENTS</span><h3>Coming soon<span aria-hidden="true">↗</span></h3><p>Assignments for the 24-event slate are made in the first club periods of the fall. Yours will appear here once the leaders post them.</p></div><span class="coming-pill">Not assigned yet</span></div>${countdownHTML}`;
+        ${currentAssignmentsHTML('')}${countdownHTML}`;
       const sel = document.getElementById('season-select');
       const save = document.getElementById('season-save');
       const commit = () => {
@@ -468,14 +507,20 @@
           <div class="season-progress-track"><div class="season-progress-fill" style="width:${pct}%"></div></div>
         </div>
       </div>
-      <div class="season-coming"><div><span class="season-label">YOUR 2026–27 ASSIGNMENTS</span><h3>Coming soon<span aria-hidden="true">↗</span></h3><p>Assignments for the 24-event slate are made in the first club periods of the fall. Yours will appear here once the leaders post them.</p></div><span class="coming-pill">Not assigned yet</span></div>${countdownHTML}`;
+      ${currentAssignmentsHTML(name)}${countdownHTML}`;
 
     const change = document.getElementById('season-change');
     if (change) change.addEventListener('click', () => {
       localStorage.removeItem('fx_member');
       renderSeason();
     });
-    host.querySelectorAll('.season-event-chip').forEach(chip => {
+    host.querySelectorAll('.season-event-chip[data-current-ev]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const ev = (window.EVENTS || []).find(x => x.name === chip.dataset.currentEv);
+        if (ev && window.openModal) window.openModal(ev);
+      });
+    });
+    host.querySelectorAll('.season-event-chip[data-ev]').forEach(chip => {
       chip.addEventListener('click', () => {
         const ev = (window.ARCHIVED_EVENTS || []).find(x => x.name === chip.dataset.ev);
         if (ev && window.openModal) window.openModal(ev);

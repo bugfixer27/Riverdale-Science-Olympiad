@@ -1815,6 +1815,22 @@
     color: #1f6b35;
   }
 
+  .leader-action-btn.reject {
+    background: #fdeeee;
+    color: #a3242a;
+  }
+
+  .leader-action-btn.reject:hover {
+    border-color: #a3242a;
+    background: #f9dcdc;
+  }
+
+  .budget-item-card.is-leaving {
+    opacity: 0;
+    transform: translateX(16px);
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+
   /* === NEWCOMER PAGE === */
   .newcomer-hero {
     padding: 48px;
