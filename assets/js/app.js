@@ -880,7 +880,8 @@ function renderPurchaseRequestCard(request) {
   const rowNumber = request.rowNumber ? Number(request.rowNumber) : 0;
   const actions = leadersUnlocked && rowNumber
     ? `<div class="leader-actions">
-        <button class="leader-action-btn" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Approved')">Approve</button>
+        <label class="leader-total-edit">Total $<input type="number" min="0" step="0.01" inputmode="decimal" id="request-total-${rowNumber}" value="${budgetRequestAmount(request).toFixed(2)}" data-original="${budgetRequestAmount(request).toFixed(2)}" aria-label="Approved total"></label>
+        <button class="leader-action-btn" type="button" onclick="approvePurchaseRequest(${rowNumber})">Approve</button>
         <button class="leader-action-btn" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Ordered')">Mark Bought</button>
         <button class="leader-action-btn received" type="button" onclick="updatePurchaseStatus(${rowNumber}, 'Received')">Mark Received</button>
         <button class="leader-action-btn reject" type="button" onclick="rejectPurchaseRequest(${rowNumber})">Reject</button>
@@ -1008,7 +1009,19 @@ function rejectPurchaseRequest(rowNumber) {
   updatePurchaseStatus(rowNumber, 'Rejected / Cut');
 }
 
-function updatePurchaseStatus(rowNumber, status) {
+function approvePurchaseRequest(rowNumber) {
+  const input = document.getElementById(`request-total-${rowNumber}`);
+  const value = input ? input.value.trim() : '';
+  if (value && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+    setBudgetStatus('Enter a valid total before approving.', 'error');
+    input.focus();
+    return;
+  }
+  const changed = value && Number(value) !== Number(input.dataset.original);
+  updatePurchaseStatus(rowNumber, 'Approved', changed ? { totalRequest: Number(value).toFixed(2) } : {});
+}
+
+function updatePurchaseStatus(rowNumber, status, extra = {}) {
   if (!BUDGET_API_URL) {
     setBudgetStatus('Budget API is not connected yet, so status changes cannot be saved.', 'error');
     return;
@@ -1017,11 +1030,16 @@ function updatePurchaseStatus(rowNumber, status) {
   setBudgetStatus(`Saving status: ${status}...`);
   loadBudgetAPI('updatePurchaseStatus', {
     rowNumber,
-    status
+    status,
+    ...extra
   })
-    .then(() => {
+    .then(result => {
       budgetLoaded = false;
-      setBudgetStatus(`Request marked ${status}. Refreshing budget cards...`, 'success');
+      if (extra.totalRequest !== undefined && result && result.totalRequest === undefined) {
+        setBudgetStatus(`Request marked ${status}, but the total was not saved. Redeploy the budget Apps Script (docs/apps-script-budget-api.js).`, 'error');
+      } else {
+        setBudgetStatus(`Request marked ${status}${extra.totalRequest !== undefined ? ` at ${formatBudgetMoney(Number(extra.totalRequest))}` : ''}. Refreshing budget cards...`, 'success');
+      }
       window.setTimeout(() => loadBudgetData(true), 700);
     })
     .catch(error => {

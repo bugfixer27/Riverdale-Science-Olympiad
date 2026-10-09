@@ -225,6 +225,14 @@ function updatePurchaseStatus(params) {
       throw new Error('Invalid status.');
     }
 
+    // Optional: leaders can correct the Total Request before approving.
+    let totalRequest;
+    if (params.totalRequest !== undefined && String(params.totalRequest).trim() !== '') {
+      totalRequest = numberFromParam(params.totalRequest);
+      if (totalRequest < 0) throw new Error('Invalid total.');
+      sheet.getRange(rowNumber, 8).setValue(totalRequest);
+    }
+
     sheet.getRange(rowNumber, 9).setValue(status);
 
     let spendingLogRow = '';
@@ -232,7 +240,7 @@ function updatePurchaseStatus(params) {
       spendingLogRow = logPurchaseRequestToSpending(spreadsheet, rowNumber, status);
     }
 
-    return { rowNumber, status, spendingLogRow };
+    return { rowNumber, status, spendingLogRow, totalRequest };
   } finally {
     lock.releaseLock();
   }
