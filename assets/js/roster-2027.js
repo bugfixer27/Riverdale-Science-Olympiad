@@ -4,7 +4,7 @@ const ROSTER_2027_META = {
   "source": "TeamFit Team Builder",
   "version": 55,
   "updatedAt": "2026-10-07T20:52:25.389Z",
-  "syncedAt": "2026-10-08T13:51:32.921Z",
+  "syncedAt": "2026-10-09T01:09:12.449Z",
   "published": false,
   "slotsPerTeam": 50,
   "unplaced": 1
